@@ -120,10 +120,31 @@ contract('ERC721Template', (accounts) => {
     })
 
     it('should not allowed to create a new ERC20Token directly from the ERC20Factory', async () => {
-        //   await token.createERC20(blob,'ERC20DT1','ERC20DT1Symbol',web3.utils.toWei('10'), {from:admin})
-         //  assert(tokenDecimals.toNumber() === decimals)
+      
         
         await expectRevert.unspecified(factoryERC20.createToken(blob,'ERC20DT1','ERC20DT1Symbol',web3.utils.toWei('10'),token.address, {from:user2}))
+       })
+
+       it('should mint new ERC20Tokens from minter', async () => {
+        const trxReceiptERC20 = await token.createERC20(blob,'ERC20DT1','ERC20DT1Symbol',web3.utils.toWei('10'), {from:admin})
+        
+         //  assert(tokenDecimals.toNumber() === decimals)
+         const ERC20CreatedEventArgs = testUtils.getEventArgsFromTx(trxReceiptERC20, 'ERC20Created')
+         erc20Address = ERC20CreatedEventArgs.erc20Address
+         erc20Token = await ERC20Template.at(erc20Address)
+        
+        await erc20Token.mint(user2,web3.utils.toWei('1'),{from:admin})
+       })
+
+       it('should not allow to mint new ERC20Tokens if not ERC721 minter', async () => {
+        const trxReceiptERC20 = await token.createERC20(blob,'ERC20DT1','ERC20DT1Symbol',web3.utils.toWei('10'), {from:admin})
+        
+         //  assert(tokenDecimals.toNumber() === decimals)
+         const ERC20CreatedEventArgs = testUtils.getEventArgsFromTx(trxReceiptERC20, 'ERC20Created')
+         erc20Address = ERC20CreatedEventArgs.erc20Address
+         erc20Token = await ERC20Template.at(erc20Address)
+        
+        await expectRevert(erc20Token.mint(user2,web3.utils.toWei('1'),{from:user2}),'DataTokenTemplate: invalid minter')
        })
 
    
