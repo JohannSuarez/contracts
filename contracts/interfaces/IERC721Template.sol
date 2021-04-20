@@ -128,5 +128,11 @@ interface IERC721Template is IERC165 {
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) external;
 
 
-    function initialize(address admin, string calldata name, string calldata symbol,address metadata) external returns (bool);
+    function initialize(address admin, string calldata name, string calldata symbol,address metadata, address erc20Factory,bytes calldata _data,
+        bytes calldata flags) external returns (bool);
+
+    function hasRole(bytes32 role, address account) external view returns (bool);
+
+
+
 }

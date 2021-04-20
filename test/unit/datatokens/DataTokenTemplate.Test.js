@@ -5,8 +5,11 @@ const { assert } = chai
 const chaiAsPromised = require('chai-as-promised')
 chai.use(chaiAsPromised)
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const Template = artifacts.require('ERC721Template')
-const DTFactory = artifacts.require('ERC721Factory')
+const { ethers } = require("ethers");
+const ERC721Template = artifacts.require('ERC721Template')
+const ERC20Template = artifacts.require('ERC20Template')
+const ERC721Factory = artifacts.require('ERC721Factory')
+const ERC20Factory = artifacts.require('ERC20Factory')
 const Token = artifacts.require('ERC721Template')
 const Metadata = artifacts.require('Metadata')
 const testUtils = require('../../helpers/utils')
@@ -39,18 +42,22 @@ contract('ERC721Template', (accounts) => {
             constants.blob[0]
         )
         metadata = await Metadata.new()
-        console.log(metadata.address)
-        template = await Template.new('Template', 'TEMPLATE', admin, blob, blob, metadata.address)
-        factory = await DTFactory.new(
-            template.address,
-            communityFeeCollector
+        //console.log(metadata.address)
+       
+        templateERC20 = await ERC20Template.new('TemplateERC20','TEMPLATE20',user2,web3.utils.toWei('22'),blob,communityFeeCollector)
+        factoryERC20 = await ERC20Factory.new(templateERC20.address,communityFeeCollector)
+        templateERC721 = await ERC721Template.new('TemplateERC721', 'TEMPLATE721', admin, metadata.address,factoryERC20.address,blob, blob,)
+        factoryERC721 = await ERC721Factory.new(
+            templateERC721.address,
+            communityFeeCollector,
+            factoryERC20.address
         )
        // blob = 'https://example.com/dataset-1'
 
-        const trxReceipt = await factory.createERC721Token('DT1','DTSYMBOL',admin,metadata.address)
+        const trxReceipt = await factoryERC721.createERC721Token('DT1','DTSYMBOL',admin,metadata.address,blob, blob)
         const TokenCreatedEventArgs = testUtils.getEventArgsFromTx(trxReceipt, 'TokenCreated')
         tokenAddress = TokenCreatedEventArgs.newTokenAddress
-        token = await Token.at(tokenAddress)
+        token = await ERC721Template.at(tokenAddress)
         symbol = await token.symbol()
         name = await token.name()
         assert(name === 'DT1')
@@ -68,7 +75,7 @@ contract('ERC721Template', (accounts) => {
     })
 
     it('should fail to re-initialize the contracts', async () => {
-        truffleAssert.fails(token.initialize(admin,'NewName', 'NN',metadata.address),
+        truffleAssert.fails(token.initialize(admin,'NewName', 'NN',metadata.address,factoryERC20.address,blob, blob),
             truffleAssert.ErrorType.REVERT,
             'ERC721Template: token instance already initialized')
     })
@@ -77,34 +84,47 @@ contract('ERC721Template', (accounts) => {
        
         let totalSupply = await token.totalSupply()
         assert(totalSupply == 0)
-        await token.mint(admin,1,{from: admin})
+        await token.mint(admin,{from: admin})
         
         totalSupply = await token.totalSupply()
         assert(totalSupply == 1)
 
         assert(await token.balanceOf(admin) == 1)
 
-        await expectRevert(token.mint(admin,1,{from: admin}),'ERC721: token already minted')
+        //await expectRevert(token.mint(admin,{from: admin}),'ERC721: token already minted')
     })
 
     it('should revert if caller is not MINTER', async () => {
-        await expectRevert(token.mint(admin,2,{from: user2}),'NOT MINTER_ROLE')
+        await expectRevert(token.mint(admin,{from: user2}),'NOT MINTER_ROLE')
     })
-
-    // it('should get the token name', async () => {
-    //     const tokenName = await token.name()
-    //     assert(tokenName === name)
-    // })
-
-    // it('should get the token symbol', async () => {
-    //     const tokenSymbol = await token.symbol()
-    //     assert(tokenSymbol === symbol)
-    // })
 
     it('should update the metadata', async () => {
-        await token.update(blob,blob)
-      //  assert(tokenDecimals.toNumber() === decimals)
+        await token.update(blob,blob,{from:admin})
+      
     })
+
+    it('should not be allowed to update the metadata if not METADATA_ROLE', async () => {
+        await expectRevert(token.update(blob,blob,{from:user2}),'NOT METADATA_ROLE')
+      
+    })
+
+    it('should create a new ERC20Token', async () => {
+        await token.createERC20(blob,'ERC20DT1','ERC20DT1Symbol',web3.utils.toWei('10'), {from:admin})
+    
+        await expectRevert(token.createERC20(blob,'ERC20DT1','ERC20DT1Symbol',web3.utils.toWei('10'), {from:admin}),'ERC20 Already Created')
+    })
+
+    it('should not allowed to create a new ERC20Token if NOT Minter ROLE in ERC721Contract', async () => {
+   
+     await expectRevert(token.createERC20(blob,'ERC20DT1','ERC20DT1Symbol',web3.utils.toWei('10'), {from:user2}),'NOT MINTER_ROLE')
+    })
+
+    it('should not allowed to create a new ERC20Token directly from the ERC20Factory', async () => {
+        //   await token.createERC20(blob,'ERC20DT1','ERC20DT1Symbol',web3.utils.toWei('10'), {from:admin})
+         //  assert(tokenDecimals.toNumber() === decimals)
+        
+        await expectRevert.unspecified(factoryERC20.createToken(blob,'ERC20DT1','ERC20DT1Symbol',web3.utils.toWei('10'),token.address, {from:user2}))
+       })
 
    
 })
