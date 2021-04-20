@@ -40,7 +40,7 @@ contract ERC721Template is ERC721, AccessControl {
         bytes memory flags
     ) public ERC721(name, symbol) {
       //  _metadata = metadata;
-        _initialize(admin, name, symbol,metadata,erc20Factory,_data,flags);
+      // _initialize(admin, name, symbol,metadata,erc20Factory,_data,flags);
         
     }
 

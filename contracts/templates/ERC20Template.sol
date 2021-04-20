@@ -95,14 +95,14 @@ contract ERC20Template is ERC20('test','testSymbol') {
     )
         public
     {
-        _initialize(
-            name,
-            symbol,
-            minterAddress,
-            cap,
-            blob,
-            feeCollector
-        );
+        // _initialize(
+        //     name,
+        //     symbol,
+        //     minterAddress,
+        //     cap,
+        //     blob,
+        //     feeCollector
+        // );
     }
     
     /**
