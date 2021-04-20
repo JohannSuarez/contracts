@@ -3,9 +3,10 @@ pragma solidity >=0.6.0;
 // SPDX-License-Identifier: (Apache-2.0 AND CC-BY-4.0)
 // Code is Apache-2.0 and docs are CC-BY-4.0
 
-import './utils/Deployer.sol';
-import './interfaces/IERC20Template.sol';
-import './interfaces/IERC721Template.sol';
+import "./utils/Deployer.sol";
+import "./interfaces/IERC20Template.sol";
+import "./interfaces/IERC721Template.sol";
+
 /**
  * @title DTFactory contract
  * @author Ocean Protocol Team
@@ -17,7 +18,7 @@ import './interfaces/IERC721Template.sol';
  *      Proxy contract functionality is based on Ocean Protocol custom implementation of ERC1167 standard.
  */
 contract ERC20Factory is Deployer {
-    address private tokenTemplate;
+    address[] public tokenTemplate;
     address private communityFeeCollector;
     uint256 private currentTokenCount = 1;
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -43,16 +44,13 @@ contract ERC20Factory is Deployer {
      * @param _template refers to the address of a deployed DataToken contract.
      * @param _collector refers to the community fee collector address
      */
-    constructor(
-        address _template,
-        address _collector
-    ) public {
+    constructor(address _template, address _collector) public {
         require(
-            _template != address(0) &&
-            _collector != address(0),
-            'DTFactory: Invalid template token/community fee collector address'
+            _template != address(0) && _collector != address(0),
+            "DTFactory: Invalid template token/community fee collector address"
         );
-        tokenTemplate = _template;
+        tokenTemplate.push(_template);
+        //tokenTemplate = _template;
         communityFeeCollector = _collector;
     }
 
@@ -70,27 +68,26 @@ contract ERC20Factory is Deployer {
         string memory name,
         string memory symbol,
         uint256 cap,
-        address from
-    )
-        public
-        returns (address token)
-    {
-        require(
-            cap != 0,
-            'DTFactory: zero cap is not allowed'
-        );
-
-        token = deploy(tokenTemplate);
+        address from,
+        uint256 templateIndex
+    ) public returns (address token) {
+        require(_isContract(msg.sender), "NOT CONTRACT");
+        require(cap != 0, "DTFactory: zero cap is not allowed");
+        address templateAddress = getTokenTemplateAddress(templateIndex);
+        token = deploy(templateAddress);
 
         require(
             token != address(0),
-            'DTFactory: Failed to perform minimal deploy of a new token'
+            "DTFactory: Failed to perform minimal deploy of a new token"
         );
         IERC20Template tokenInstance = IERC20Template(token);
-        
+
         IERC721Template erc721Instance = IERC721Template(msg.sender);
 
-        require(erc721Instance.hasRole(MINTER_ROLE, from), "NOT MINTER_ROLE, not allowed to create");
+        require(
+            erc721Instance.hasRole(MINTER_ROLE, from),
+            "NOT MINTER_ROLE, not allowed to create"
+        );
 
         require(
             tokenInstance.initialize(
@@ -101,17 +98,10 @@ contract ERC20Factory is Deployer {
                 blob,
                 communityFeeCollector
             ),
-            'DTFactory: Unable to initialize token instance'
+            "DTFactory: Unable to initialize token instance"
         );
-        emit TokenCreated(token, tokenTemplate, name);
-        emit TokenRegistered(
-            token,
-            name,
-            symbol,
-            cap,
-            from,
-            blob
-        );
+        emit TokenCreated(token, tokenTemplate[0], name);
+        emit TokenRegistered(token, name, symbol, cap, from, blob);
         currentTokenCount += 1;
     }
 
@@ -125,9 +115,53 @@ contract ERC20Factory is Deployer {
 
     /**
      * @dev get the token template address
-     * @return the template address
+     
      */
-    function getTokenTemplate() external view returns (address) {
-        return tokenTemplate;
+    function getTokenTemplateAddress(uint256 templateIndex)
+        public
+        view
+        returns (address)
+    {
+        if (templateIndex >= tokenTemplate.length) {
+            return address(0);
+        } else return tokenTemplate[templateIndex];
+    }
+
+    function addTokenTemplate(address templateAddress)
+        external
+        returns (uint256 index)
+    {
+        require(
+            templateAddress != address(0),
+            "Template address cannot be zero address"
+        );
+        index = tokenTemplate.length;
+        tokenTemplate.push(templateAddress);
+    }
+
+    function getTokenTemplateIndex(address templateAddress)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 index = 999999; // could be any value big enough to avoid misunderstanding
+
+        for (uint256 i = 0; i < tokenTemplate.length; i++) {
+            if (tokenTemplate[i] == templateAddress) {
+                index = i;
+            }
+        }
+        return index;
+    }
+
+    /**
+     * @dev Internal function if address is contract
+     */
+    function _isContract(address address_) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(address_)
+        }
+        return size > 0;
     }
 }

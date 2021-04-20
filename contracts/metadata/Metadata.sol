@@ -30,7 +30,9 @@ contract Metadata {
     );
 
     modifier onlyDataTokenMinter(address dataToken)
-    {
+    {   
+        require(_isContract(dataToken),'NOT CONTRACT');
+
         IERC721Template token = IERC721Template(dataToken);
         require(
             address(token) == msg.sender,
@@ -83,5 +85,14 @@ contract Metadata {
             flags,
             data
         );
+    }
+
+        /**
+     * @dev Internal function if address is contract
+     */
+    function _isContract(address address_) internal view returns (bool) {
+        uint256 size;
+        assembly { size := extcodesize(address_) }
+        return size > 0;
     }
 }

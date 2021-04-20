@@ -17,7 +17,6 @@ contract ERC721Template is ERC721, AccessControl {
     uint256 private tokenId = 1;
     bool private initialized;
     address public _metadata;
-    bool private erc20Minted;
     address private _erc20Factory;
     
     event ERC20Created(address indexed erc20Address);
@@ -98,17 +97,17 @@ contract ERC721Template is ERC721, AccessControl {
         IMetadata(_metadata).create(address(this), flags, data);
     }
 
-    function update(bytes calldata flags, bytes calldata data) external {
+    function updateMetadata(bytes calldata flags, bytes calldata data) external {
         require(hasRole(METADATA_ROLE, msg.sender), "NOT METADATA_ROLE");
         IMetadata(_metadata).update(address(this), flags, data);
     }
 
-    function createERC20( string calldata blob, string calldata name, string calldata symbol, uint256 cap) external returns (address) {
+    function createERC20( string calldata blob, string calldata name, string calldata symbol, uint256 cap,uint256 templateIndex) external returns (address) {
         require(hasRole(MINTER_ROLE, msg.sender), "NOT MINTER_ROLE");
-        require(erc20Minted == false, 'ERC20 Already Created');
+     
         
-        address token = IERC20Factory(_erc20Factory).createToken(blob,name,symbol,cap,msg.sender); // already checked when creating a new ERC20 in ERC20Factory, could be removerd
-        erc20Minted = true;
+        address token = IERC20Factory(_erc20Factory).createToken(blob,name,symbol,cap,msg.sender,templateIndex); // already checked when creating a new ERC20 in ERC20Factory, could be removerd
+      
 
 
         //FOR TEST PURPOSE BUT COULD BE COMPLETED OR REMOVED
