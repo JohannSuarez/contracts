@@ -73,8 +73,8 @@ contract ERC20Factory is Deployer {
     ) public returns (address token) {
         require(_isContract(msg.sender), "NOT CONTRACT");
         require(cap != 0, "DTFactory: zero cap is not allowed");
-        address templateAddress = getTokenTemplateAddress(templateIndex);
-        token = deploy(templateAddress);
+        
+        token = deploy(getTokenTemplateAddress(templateIndex));
 
         require(
             token != address(0),
